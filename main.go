@@ -188,42 +188,49 @@ func main() {
 		}
 	}
 
-	//マルコフ射出
-	// res := genWord()
-	// fmt.Println(res)
-	// api.PostTweet(res, nil)
-
 	//575テスト
 	postStr := go7goFunc()
 	fmt.Println(postStr)
 
-	// 575リスナ
-	// twitterStream := api.PublicStreamFilter(vre)
-	// for {
-	// 	fmt.Println("Listening...")
-	// 	x := <-twitterStream.C
-	// 	switch tw := x.(type) {
-	// 	case anaconda.Tweet:
-	// 		searchRes, _ := api.GetUserTimeline(vre)
-	// 		for _, tweet := range searchRes {
-	// 			if !(strings.HasPrefix(tweet.Text, "RT") || strings.HasPrefix(tweet.Text, "@")) {
-	// 				if strings.Contains(tweet.FullText, "http://") || strings.Contains(tweet.FullText, "https://") {
-	// 					tweet.FullText = strings.Split(tweet.FullText, "http")[0]
-	// 				}
-	// 				kagomeParse(tweet.FullText)
-	// 			}
-	// 		}
-	// 		fmt.Println("Catch!")
-	// 		v2 := url.Values{}
-	// 		v2.Add("in_reply_to_status_id", tw.IdStr)
-	// 		postStr := "@"
-	// 		postStr += tw.User.ScreenName
-	// 		postStr += " ここで一句:\n"
-	// 		postStr += go7goFunc()
-	// 		fmt.Println(postStr)
-	// 		api.PostTweet(postStr, v2)
-	// 	default:
-	// 	}
-	// }
+	// 定期ツイート
+	timeTw := time.NewTicker(1 * time.Hour)
+
+	// PublicStreamの監視
+	twitterStream := api.PublicStreamFilter(vre)
+	for {
+		fmt.Println("Listening...")
+		select {
+		// マルコフが出る
+		case <-timeTw.C:
+			fmt.Println("【定期】マルコフ連鎖実行")
+			res := genWord()
+			fmt.Println(res)
+			api.PostTweet(res, nil)
+		// 575が出る
+		case x := <-twitterStream.C:
+			switch tw := x.(type) {
+			case anaconda.Tweet:
+				searchRes, _ := api.GetUserTimeline(vre)
+				for _, tweet := range searchRes {
+					if !(strings.HasPrefix(tweet.Text, "RT") || strings.HasPrefix(tweet.Text, "@")) {
+						if strings.Contains(tweet.FullText, "http://") || strings.Contains(tweet.FullText, "https://") {
+							tweet.FullText = strings.Split(tweet.FullText, "http")[0]
+						}
+						kagomeParse(tweet.FullText)
+					}
+				}
+				fmt.Println("Catch!")
+				v2 := url.Values{}
+				v2.Add("in_reply_to_status_id", tw.IdStr)
+				postStr := "@"
+				postStr += tw.User.ScreenName
+				postStr += " ここで一句:\n"
+				postStr += go7goFunc()
+				fmt.Println(postStr)
+				api.PostTweet(postStr, v2)
+			default:
+			}
+		}
+	}
 
 }
