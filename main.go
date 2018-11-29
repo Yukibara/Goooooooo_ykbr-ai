@@ -103,23 +103,41 @@ func makeGo7Go(num int) string {
 	return strings.Replace(res, "EOS", "", -1)
 }
 
-const five = 12
-const seven = 18
+const five = 15
+const seven = 21
 
 func go7goFunc() string {
-	re := regexp.MustCompile(`(\p{Katakana}|\p{Hiragana})*`)
+	re := regexp.MustCompile(`(\p{Han}|\p{Katakana}|\p{Hiragana})*`)
 	res := ""
+
+	// 読みで575するための辞書
+	udic, err := tokenizer.NewUserDic("./userdic.txt")
+	if err != nil {
+		panic(err)
+	}
+	t := tokenizer.New()
+	t.SetUserDic(udic)
+
 	for {
 		temp := makeGo7Go(five)
 		if len(temp) == five {
 			a := strings.Join(re.FindAllString(temp, -1), "")
-			b := len(a)
-			fmt.Println(b)
-			if utf8.RuneCountInString(a) != 5 {
-				continue
+			count := 0
+			morphs := t.Tokenize(a)
+			for _, m := range morphs {
+				features := m.Features()
+				b := len(features)
+				// 中身があれば文字数に加算
+				if b >= 8 {
+					c := (features[7])
+					count += utf8.RuneCountInString(c)
+				}
 			}
-			res += temp + "\n"
-			break
+			if count == 5 {
+				res += temp + "\n"
+				break
+			}
+			continue
 		}
 	}
 
@@ -127,24 +145,45 @@ func go7goFunc() string {
 		temp := makeGo7Go(seven)
 		if len(temp) == seven {
 			a := strings.Join(re.FindAllString(temp, -1), "")
-			b := len(a)
-			fmt.Println(b)
-			if len(a) != seven {
-				continue
+			count := 0
+			morphs := t.Tokenize(a)
+			for _, m := range morphs {
+				features := m.Features()
+				b := len(features)
+
+				// 中身があれば文字数に加算
+				if b >= 8 {
+					c := (features[7])
+					count += utf8.RuneCountInString(c)
+				}
 			}
-			res += temp + "\n"
-			break
+			if count == 7 {
+				res += temp + "\n"
+				break
+			}
+			continue
 		}
 	}
 	for {
 		temp := makeGo7Go(five)
 		if len(temp) == five {
 			a := strings.Join(re.FindAllString(temp, -1), "")
-			if len(a) != five {
-				continue
+			count := 0
+			morphs := t.Tokenize(a)
+			for _, m := range morphs {
+				features := m.Features()
+				b := len(features)
+				// 中身があれば文字数に加算
+				if b > 6 {
+					c := (features[7])
+					count += utf8.RuneCountInString(c)
+				}
 			}
-			res += temp
-			break
+			if count == 5 {
+				res += temp + "\n"
+				break
+			}
+			continue
 		}
 	}
 
@@ -175,36 +214,36 @@ func main() {
 	// api.PostTweet(res, nil)
 
 	// 575テスト
-	postStr := go7goFunc()
-	fmt.Println(postStr)
+	// postStr := go7goFunc()
+	// fmt.Println(postStr)
 
 	// 575リスナ
-	// twitterStream := api.PublicStreamFilter(vre)
-	// for {
-	// 	fmt.Println("Listening...")
-	// 	x := <-twitterStream.C
-	// 	switch tw := x.(type) {
-	// 	case anaconda.Tweet:
-	// 		searchRes, _ := api.GetUserTimeline(vre)
-	// 		for _, tweet := range searchRes {
-	// 			if !(strings.HasPrefix(tweet.Text, "RT") || strings.HasPrefix(tweet.Text, "@")) {
-	// 				if strings.Contains(tweet.FullText, "http://") || strings.Contains(tweet.FullText, "https://") {
-	// 					tweet.FullText = strings.Split(tweet.FullText, "http")[0]
-	// 				}
-	// 				kagomeParse(tweet.FullText)
-	// 			}
-	// 		}
-	// 		fmt.Println("Catch!")
-	// 		v2 := url.Values{}
-	// 		v2.Add("in_reply_to_status_id", tw.User.IdStr)
-	// 		postStr := "@"
-	// 		postStr += tw.User.ScreenName
-	// 		postStr += " ここで一句:\n"
-	// 		postStr += go7goFunc()
-	// 		fmt.Println(postStr)
-	// 		api.PostTweet(postStr, v2)
-	// 	default:
-	// 	}
-	// }
+	twitterStream := api.PublicStreamFilter(vre)
+	for {
+		fmt.Println("Listening...")
+		x := <-twitterStream.C
+		switch tw := x.(type) {
+		case anaconda.Tweet:
+			searchRes, _ := api.GetUserTimeline(vre)
+			for _, tweet := range searchRes {
+				if !(strings.HasPrefix(tweet.Text, "RT") || strings.HasPrefix(tweet.Text, "@")) {
+					if strings.Contains(tweet.FullText, "http://") || strings.Contains(tweet.FullText, "https://") {
+						tweet.FullText = strings.Split(tweet.FullText, "http")[0]
+					}
+					kagomeParse(tweet.FullText)
+				}
+			}
+			fmt.Println("Catch!")
+			v2 := url.Values{}
+			v2.Add("in_reply_to_status_id", tw.User.IdStr)
+			postStr := "@"
+			postStr += tw.User.ScreenName
+			postStr += " ここで一句:\n"
+			postStr += go7goFunc()
+			fmt.Println(postStr)
+			api.PostTweet(postStr, v2)
+		default:
+		}
+	}
 
 }
