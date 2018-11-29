@@ -75,35 +75,45 @@ func genWord() string {
 	return strings.Replace(res, "EOS", "", -1)
 }
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+func random(min, max int) int {
+	return rand.Intn(max-min) + min
+}
+
 func makeGo7Go(num int) string {
-	timee := int64(time.Now().UnixNano())
-	rand.Seed(timee)
 	res := ""
-	temp := dict["BEGIN"][rand.Intn(len(dict["BEGIN"]))]
+	temp := dict["BEGIN"][random(0, len(dict["BEGIN"]))]
+
 	for {
-		if len(res) == num {
+		if temp == "END" {
+			break
+		} else if len(res) == num {
 			break
 		}
-		for {
-			if temp == "END" {
-				break
-			}
-			res += temp
-			if len(dict[temp]) > 0 {
-				temp = dict[temp][rand.Intn(len(dict[temp]))]
-			}
+		res += temp
+		if len(dict[temp]) > 0 {
+			temp = dict[temp][random(0, len(dict[temp]))]
 		}
 	}
+
 	return strings.Replace(res, "EOS", "", -1)
 }
 
 func go7goFunc() string {
 	res := ""
 
-	res += makeGo7Go(5)
-	fmt.Println("OK 5.")
-	res += makeGo7Go(7)
-	res += makeGo7Go(5)
+	temp := makeGo7Go(5)
+	res += temp + "\n"
+
+	temp = makeGo7Go(7)
+	res += temp + "\n"
+
+	temp = makeGo7Go(5)
+	res += temp
+
 	return strings.Replace(res, "EOS", "", -1)
 }
 
@@ -113,7 +123,7 @@ func main() {
 	v.Set("screen_name", "ykbr_")
 	v.Add("count", "200")
 	vre := url.Values{}
-	vre.Set("track", "@ykbr__ai 575")
+	vre.Set("track", "\"@ykbr__ai 575\"")
 	twitterStream := api.PublicStreamFilter(vre)
 
 	searchRes, _ := api.GetUserTimeline(v)
@@ -124,9 +134,14 @@ func main() {
 			kagomeParse(tweet.FullText)
 		}
 	}
-	res := genWord()
-	fmt.Println(res)
-	api.PostTweet(res, nil)
+
+	//マルコフ射出
+	// res := genWord()
+	// fmt.Println(res)
+	// api.PostTweet(res, nil)
+
+	// postStr := go7goFunc()
+	// fmt.Println(postStr)
 
 	for {
 		x := <-twitterStream.C
@@ -143,10 +158,11 @@ func main() {
 			fmt.Println("Success")
 			v2 := url.Values{}
 			v2.Add("in_reply_to_status_id", tw.IdStr)
-			postStr := ""
-			postStr += tw.InReplyToScreenName
-			postStr += " "
+			postStr := "@"
+			postStr += tw.User.ScreenName
+			postStr += " ここで一句:\n"
 			postStr += go7goFunc()
+			fmt.Println(postStr)
 			api.PostTweet(postStr, v)
 		default:
 		}
