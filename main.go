@@ -5,8 +5,10 @@ import (
 	"math/rand"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/ChimeraCoder/anaconda"
 	"github.com/ikawaha/kagome/tokenizer"
@@ -86,7 +88,6 @@ func random(min, max int) int {
 func makeGo7Go(num int) string {
 	res := ""
 	temp := dict["BEGIN"][random(0, len(dict["BEGIN"]))]
-
 	for {
 		if temp == "END" {
 			break
@@ -102,14 +103,21 @@ func makeGo7Go(num int) string {
 	return strings.Replace(res, "EOS", "", -1)
 }
 
-const five = 10
-const seven = 14
+const five = 12
+const seven = 18
 
 func go7goFunc() string {
+	re := regexp.MustCompile(`(\p{Katakana}|\p{Hiragana})*`)
 	res := ""
 	for {
 		temp := makeGo7Go(five)
 		if len(temp) == five {
+			a := strings.Join(re.FindAllString(temp, -1), "")
+			b := len(a)
+			fmt.Println(b)
+			if utf8.RuneCountInString(a) != 5 {
+				continue
+			}
 			res += temp + "\n"
 			break
 		}
@@ -118,6 +126,12 @@ func go7goFunc() string {
 	for {
 		temp := makeGo7Go(seven)
 		if len(temp) == seven {
+			a := strings.Join(re.FindAllString(temp, -1), "")
+			b := len(a)
+			fmt.Println(b)
+			if len(a) != seven {
+				continue
+			}
 			res += temp + "\n"
 			break
 		}
@@ -125,6 +139,10 @@ func go7goFunc() string {
 	for {
 		temp := makeGo7Go(five)
 		if len(temp) == five {
+			a := strings.Join(re.FindAllString(temp, -1), "")
+			if len(a) != five {
+				continue
+			}
 			res += temp
 			break
 		}
@@ -139,13 +157,11 @@ func main() {
 	v.Set("screen_name", "ykbr_")
 	v.Add("count", "200")
 	vre := url.Values{}
-	vre.Set("track", "\"@ykbr__ai 575\"")
+	vre.Set("track", "@ykbr__ai 575")
 
 	searchRes, _ := api.GetUserTimeline(v)
-	for i, tweet := range searchRes {
-		if strings.HasPrefix(tweet.Text, "RT") || strings.HasPrefix(tweet.Text, "@") {
-			searchRes = append(searchRes[:i], searchRes[i+1:]...)
-		} else {
+	for _, tweet := range searchRes {
+		if !(strings.HasPrefix(tweet.Text, "RT") || strings.HasPrefix(tweet.Text, "@")) {
 			if strings.Contains(tweet.FullText, "http://") || strings.Contains(tweet.FullText, "https://") {
 				tweet.FullText = strings.Split(tweet.FullText, "http")[0]
 			}
@@ -159,37 +175,36 @@ func main() {
 	// api.PostTweet(res, nil)
 
 	// 575テスト
-	// postStr := go7goFunc()
-	// fmt.Println(postStr)
+	postStr := go7goFunc()
+	fmt.Println(postStr)
 
 	// 575リスナ
-	twitterStream := api.PublicStreamFilter(vre)
-	for {
-		x := <-twitterStream.C
-		switch tw := x.(type) {
-		case anaconda.Tweet:
-			searchRes, _ := api.GetUserTimeline(vre)
-			for i, tweet := range searchRes {
-				if strings.HasPrefix(tweet.Text, "RT") || strings.HasPrefix(tweet.Text, "@") {
-					searchRes = append(searchRes[:i], searchRes[i+1:]...)
-				} else {
-					if strings.Contains(tweet.FullText, "http://") || strings.Contains(tweet.FullText, "https://") {
-						tweet.FullText = strings.Split(tweet.FullText, "http")[0]
-					}
-					kagomeParse(tweet.FullText)
-				}
-			}
-			fmt.Println("Success")
-			v2 := url.Values{}
-			v2.Add("in_reply_to_status_id", tw.IdStr)
-			postStr := "@"
-			postStr += tw.User.ScreenName
-			postStr += " ここで一句:\n"
-			postStr += go7goFunc()
-			fmt.Println(postStr)
-			api.PostTweet(postStr, v)
-		default:
-		}
-	}
+	// twitterStream := api.PublicStreamFilter(vre)
+	// for {
+	// 	fmt.Println("Listening...")
+	// 	x := <-twitterStream.C
+	// 	switch tw := x.(type) {
+	// 	case anaconda.Tweet:
+	// 		searchRes, _ := api.GetUserTimeline(vre)
+	// 		for _, tweet := range searchRes {
+	// 			if !(strings.HasPrefix(tweet.Text, "RT") || strings.HasPrefix(tweet.Text, "@")) {
+	// 				if strings.Contains(tweet.FullText, "http://") || strings.Contains(tweet.FullText, "https://") {
+	// 					tweet.FullText = strings.Split(tweet.FullText, "http")[0]
+	// 				}
+	// 				kagomeParse(tweet.FullText)
+	// 			}
+	// 		}
+	// 		fmt.Println("Catch!")
+	// 		v2 := url.Values{}
+	// 		v2.Add("in_reply_to_status_id", tw.User.IdStr)
+	// 		postStr := "@"
+	// 		postStr += tw.User.ScreenName
+	// 		postStr += " ここで一句:\n"
+	// 		postStr += go7goFunc()
+	// 		fmt.Println(postStr)
+	// 		api.PostTweet(postStr, v2)
+	// 	default:
+	// 	}
+	// }
 
 }
