@@ -1,3 +1,5 @@
+[![GolangCI](https://golangci.com/badges/github.com/Yukibara/Goooooooo_ykbr-ai.svg)](https://golangci.com)
+
 4つの環境変数 `CONSUMER_KEY`,`CONSUMER_SECRET`,`ACCESS_TOKEN`,`ACCESS_TOKEN_SECRET` に自分の値をセットします。
 
 例)
