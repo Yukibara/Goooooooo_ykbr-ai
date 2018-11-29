@@ -174,7 +174,7 @@ func go7goFunc() string {
 				features := m.Features()
 				b := len(features)
 				// 中身があれば文字数に加算
-				if b > 6 {
+				if b >= 8 {
 					c := (features[7])
 					count += utf8.RuneCountInString(c)
 				}
