@@ -88,5 +88,7 @@ func main() {
 			kagomeParse(tweet.FullText)
 		}
 	}
-	fmt.Println(genWord())
+	res := genWord()
+	fmt.Println(res)
+	api.PostTweet(res, nil)
 }
