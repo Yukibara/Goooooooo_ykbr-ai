@@ -86,9 +86,14 @@ func random(min, max int) int {
 }
 
 // 内部で使う用のやつ
-func makeGo7Go(num int) string {
+func makeGo7Go(num int, word string) string {
 	res := ""
-	temp := dict["BEGIN"][random(0, len(dict["BEGIN"]))]
+	// たまに次につながる単語が無くて落ちるので虚無をする
+	if dict[word] == nil {
+		dict[word] = make([]string, 0)
+		dict[word] = append(dict[word], "虚無")
+	}
+	temp := dict[word][random(0, len(dict[word]))]
 	for {
 		if temp == "END" {
 			break
@@ -121,7 +126,7 @@ func partsGo7Go(num int, worded string) (string, string) {
 	t := tokenizer.New()
 	t.SetUserDic(udic)
 	for {
-		temp := makeGo7Go(num)
+		temp := makeGo7Go(num, worded)
 		if len(temp) == num {
 			a := strings.Join(re.FindAllString(temp, -1), "")
 			count := 0
@@ -136,7 +141,7 @@ func partsGo7Go(num int, worded string) (string, string) {
 					c := (features[7])
 					// 音数のカウント
 					count += utf8.RuneCountInString(c)
-					lastWord = features[0]
+					lastWord = features[6]
 				}
 			}
 			if count == num/3 {
