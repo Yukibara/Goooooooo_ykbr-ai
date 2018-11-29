@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ChimeraCoder/anaconda"
 	"github.com/ikawaha/kagome/tokenizer"
@@ -28,7 +30,7 @@ func kagomeParse(str string) {
 	morphs := t.Tokenize(str)
 	KeyEOS := "\n"
 
-	// BGNはbeginでENDはend
+	// BEGINはbeginでENDはend
 	// メモしないと忘れるので
 	next := ""
 	for i := range morphs {
@@ -38,10 +40,10 @@ func kagomeParse(str string) {
 			next = "END"
 		}
 		if strings.Contains(morphs[i].Surface, KeyEOS) {
-			if dict["BGN"] == nil {
-				dict["BGN"] = make([]string, 0)
+			if dict["BEGIN"] == nil {
+				dict["BEGIN"] = make([]string, 0)
 			}
-			dict["BGN"] = append(dict["BGN"], next)
+			dict["BEGIN"] = append(dict["BEGIN"], next)
 			continue
 		}
 		if strings.Contains(next, KeyEOS) {
@@ -54,6 +56,24 @@ func kagomeParse(str string) {
 	}
 }
 
+func genWord() string {
+	timee := int64(time.Now().UnixNano())
+	rand.Seed(timee)
+	res := ""
+	temp := dict["BEGIN"][rand.Intn(len(dict["BEGIN"]))]
+
+	for {
+		if temp == "END" {
+			break
+		}
+		res += temp
+		if len(dict[temp]) > 0 {
+			temp = dict[temp][rand.Intn(len(dict[temp]))]
+		}
+	}
+	return strings.Replace(res, "EOS", "", -1)
+}
+
 func main() {
 	api := getAPI()
 	v := url.Values{}
@@ -61,7 +81,6 @@ func main() {
 	v.Add("count", "200")
 
 	searchRes, _ := api.GetUserTimeline(v)
-	resText := ""
 	for i, tweet := range searchRes {
 		if strings.HasPrefix(tweet.Text, "RT") || strings.HasPrefix(tweet.Text, "@") {
 			searchRes = append(searchRes[:i], searchRes[i+1:]...)
@@ -69,5 +88,5 @@ func main() {
 			kagomeParse(tweet.FullText)
 		}
 	}
-	fmt.Println(resText)
+	fmt.Println(genWord())
 }
