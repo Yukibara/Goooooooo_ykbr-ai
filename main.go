@@ -85,13 +85,14 @@ func random(min, max int) int {
 	return rand.Intn(max-min) + min
 }
 
+// 内部で使う用のやつ
 func makeGo7Go(num int) string {
 	res := ""
 	temp := dict["BEGIN"][random(0, len(dict["BEGIN"]))]
 	for {
 		if temp == "END" {
 			break
-		} else if len(res) == num {
+		} else if len(res) >= num {
 			break
 		}
 		res += temp
@@ -106,9 +107,11 @@ func makeGo7Go(num int) string {
 const five = 15
 const seven = 21
 
-func go7goFunc() string {
+// ここから呼び出すmakeGo7Goで単語を生成
+func partsGo7Go(num int) string {
 	re := regexp.MustCompile(`(\p{Han}|\p{Katakana}|\p{Hiragana})*`)
 	res := ""
+
 
 	// 読みで575するための辞書
 	udic, err := tokenizer.NewUserDic("./userdic.txt")
@@ -117,10 +120,9 @@ func go7goFunc() string {
 	}
 	t := tokenizer.New()
 	t.SetUserDic(udic)
-
 	for {
-		temp := makeGo7Go(five)
-		if len(temp) == five {
+		temp := makeGo7Go(num)
+		if len(temp) == num {
 			a := strings.Join(re.FindAllString(temp, -1), "")
 			count := 0
 			morphs := t.Tokenize(a)
@@ -128,64 +130,31 @@ func go7goFunc() string {
 				features := m.Features()
 				b := len(features)
 				// 中身があれば文字数に加算
+				// 存在を確認しましょう 例外で落ちるので(1敗)
 				if b >= 8 {
+					// 読みがカタカナで格納されているところ
 					c := (features[7])
+					// 音数のカウント
 					count += utf8.RuneCountInString(c)
 				}
 			}
-			if count == 5 {
+			if count == num/3 {
 				res += temp + "\n"
 				break
 			}
 			continue
 		}
 	}
+	return res
+}
 
-	for {
-		temp := makeGo7Go(seven)
-		if len(temp) == seven {
-			a := strings.Join(re.FindAllString(temp, -1), "")
-			count := 0
-			morphs := t.Tokenize(a)
-			for _, m := range morphs {
-				features := m.Features()
-				b := len(features)
+// これ→partsofGo7Go→makeGo7Go
+func go7goFunc() string {
+	res := ""
 
-				// 中身があれば文字数に加算
-				if b >= 8 {
-					c := (features[7])
-					count += utf8.RuneCountInString(c)
-				}
-			}
-			if count == 7 {
-				res += temp + "\n"
-				break
-			}
-			continue
-		}
-	}
-	for {
-		temp := makeGo7Go(five)
-		if len(temp) == five {
-			a := strings.Join(re.FindAllString(temp, -1), "")
-			count := 0
-			morphs := t.Tokenize(a)
-			for _, m := range morphs {
-				features := m.Features()
-				b := len(features)
-				// 中身があれば文字数に加算
-				if b >= 8 {
-					c := (features[7])
-					count += utf8.RuneCountInString(c)
-				}
-			}
-			if count == 5 {
-				res += temp + "\n"
-				break
-			}
-			continue
-		}
-	}
+	res += partsGo7Go(five)
+	res += partsGo7Go(seven)
+	res += partsGo7Go(five)
 
 	return strings.Replace(res, "EOS", "", -1)
 }
@@ -213,11 +182,11 @@ func main() {
 	// fmt.Println(res)
 	// api.PostTweet(res, nil)
 
-	// 575テスト
+	//575テスト
 	// postStr := go7goFunc()
 	// fmt.Println(postStr)
 
-	// 575リスナ
+	575リスナ
 	twitterStream := api.PublicStreamFilter(vre)
 	for {
 		fmt.Println("Listening...")
@@ -235,7 +204,7 @@ func main() {
 			}
 			fmt.Println("Catch!")
 			v2 := url.Values{}
-			v2.Add("in_reply_to_status_id", tw.User.IdStr)
+			v2.Add("in_reply_to_status_id", tw.IdStr)
 			postStr := "@"
 			postStr += tw.User.ScreenName
 			postStr += " ここで一句:\n"
