@@ -86,9 +86,14 @@ func random(min, max int) int {
 }
 
 // 内部で使う用のやつ
-func makeGo7Go(num int) string {
+func makeGo7Go(num int, word string) string {
 	res := ""
-	temp := dict["BEGIN"][random(0, len(dict["BEGIN"]))]
+	// たまに次につながる単語が無くて落ちるので虚無をする
+	if dict[word] == nil {
+		dict[word] = make([]string, 0)
+		dict[word] = append(dict[word], "虚無")
+	}
+	temp := dict[word][random(0, len(dict[word]))]
 	for {
 		if temp == "END" {
 			break
@@ -108,10 +113,10 @@ const five = 15
 const seven = 21
 
 // ここから呼び出すmakeGo7Goで単語を生成
-func partsGo7Go(num int) string {
+func partsGo7Go(num int, worded string) (string, string) {
 	re := regexp.MustCompile(`(\p{Han}|\p{Katakana}|\p{Hiragana})*`)
 	res := ""
-
+	lastWord := ""
 
 	// 読みで575するための辞書
 	udic, err := tokenizer.NewUserDic("./userdic.txt")
@@ -121,7 +126,7 @@ func partsGo7Go(num int) string {
 	t := tokenizer.New()
 	t.SetUserDic(udic)
 	for {
-		temp := makeGo7Go(num)
+		temp := makeGo7Go(num, worded)
 		if len(temp) == num {
 			a := strings.Join(re.FindAllString(temp, -1), "")
 			count := 0
@@ -136,6 +141,7 @@ func partsGo7Go(num int) string {
 					c := (features[7])
 					// 音数のカウント
 					count += utf8.RuneCountInString(c)
+					lastWord = features[6]
 				}
 			}
 			if count == num/3 {
@@ -145,16 +151,21 @@ func partsGo7Go(num int) string {
 			continue
 		}
 	}
-	return res
+	return res, lastWord
 }
 
 // これ→partsofGo7Go→makeGo7Go
 func go7goFunc() string {
 	res := ""
+	tmp := ""
+	lastword := ""
 
-	res += partsGo7Go(five)
-	res += partsGo7Go(seven)
-	res += partsGo7Go(five)
+	tmp, lastword = partsGo7Go(five, "BEGIN")
+	res += tmp
+	tmp, lastword = partsGo7Go(seven, lastword)
+	res += tmp
+	tmp, _ = partsGo7Go(five, lastword)
+	res += tmp
 
 	return strings.Replace(res, "EOS", "", -1)
 }
@@ -183,36 +194,36 @@ func main() {
 	// api.PostTweet(res, nil)
 
 	//575テスト
-	// postStr := go7goFunc()
-	// fmt.Println(postStr)
+	postStr := go7goFunc()
+	fmt.Println(postStr)
 
-	575リスナ
-	twitterStream := api.PublicStreamFilter(vre)
-	for {
-		fmt.Println("Listening...")
-		x := <-twitterStream.C
-		switch tw := x.(type) {
-		case anaconda.Tweet:
-			searchRes, _ := api.GetUserTimeline(vre)
-			for _, tweet := range searchRes {
-				if !(strings.HasPrefix(tweet.Text, "RT") || strings.HasPrefix(tweet.Text, "@")) {
-					if strings.Contains(tweet.FullText, "http://") || strings.Contains(tweet.FullText, "https://") {
-						tweet.FullText = strings.Split(tweet.FullText, "http")[0]
-					}
-					kagomeParse(tweet.FullText)
-				}
-			}
-			fmt.Println("Catch!")
-			v2 := url.Values{}
-			v2.Add("in_reply_to_status_id", tw.IdStr)
-			postStr := "@"
-			postStr += tw.User.ScreenName
-			postStr += " ここで一句:\n"
-			postStr += go7goFunc()
-			fmt.Println(postStr)
-			api.PostTweet(postStr, v2)
-		default:
-		}
-	}
+	// 575リスナ
+	// twitterStream := api.PublicStreamFilter(vre)
+	// for {
+	// 	fmt.Println("Listening...")
+	// 	x := <-twitterStream.C
+	// 	switch tw := x.(type) {
+	// 	case anaconda.Tweet:
+	// 		searchRes, _ := api.GetUserTimeline(vre)
+	// 		for _, tweet := range searchRes {
+	// 			if !(strings.HasPrefix(tweet.Text, "RT") || strings.HasPrefix(tweet.Text, "@")) {
+	// 				if strings.Contains(tweet.FullText, "http://") || strings.Contains(tweet.FullText, "https://") {
+	// 					tweet.FullText = strings.Split(tweet.FullText, "http")[0]
+	// 				}
+	// 				kagomeParse(tweet.FullText)
+	// 			}
+	// 		}
+	// 		fmt.Println("Catch!")
+	// 		v2 := url.Values{}
+	// 		v2.Add("in_reply_to_status_id", tw.IdStr)
+	// 		postStr := "@"
+	// 		postStr += tw.User.ScreenName
+	// 		postStr += " ここで一句:\n"
+	// 		postStr += go7goFunc()
+	// 		fmt.Println(postStr)
+	// 		api.PostTweet(postStr, v2)
+	// 	default:
+	// 	}
+	// }
 
 }
