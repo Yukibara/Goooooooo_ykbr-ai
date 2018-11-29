@@ -102,17 +102,33 @@ func makeGo7Go(num int) string {
 	return strings.Replace(res, "EOS", "", -1)
 }
 
+const five = 10
+const seven = 14
+
 func go7goFunc() string {
 	res := ""
+	for {
+		temp := makeGo7Go(five)
+		if len(temp) == five {
+			res += temp + "\n"
+			break
+		}
+	}
 
-	temp := makeGo7Go(5)
-	res += temp + "\n"
-
-	temp = makeGo7Go(7)
-	res += temp + "\n"
-
-	temp = makeGo7Go(5)
-	res += temp
+	for {
+		temp := makeGo7Go(seven)
+		if len(temp) == seven {
+			res += temp + "\n"
+			break
+		}
+	}
+	for {
+		temp := makeGo7Go(five)
+		if len(temp) == five {
+			res += temp
+			break
+		}
+	}
 
 	return strings.Replace(res, "EOS", "", -1)
 }
@@ -124,13 +140,15 @@ func main() {
 	v.Add("count", "200")
 	vre := url.Values{}
 	vre.Set("track", "\"@ykbr__ai 575\"")
-	twitterStream := api.PublicStreamFilter(vre)
 
 	searchRes, _ := api.GetUserTimeline(v)
 	for i, tweet := range searchRes {
 		if strings.HasPrefix(tweet.Text, "RT") || strings.HasPrefix(tweet.Text, "@") {
 			searchRes = append(searchRes[:i], searchRes[i+1:]...)
 		} else {
+			if strings.Contains(tweet.FullText, "http://") || strings.Contains(tweet.FullText, "https://") {
+				tweet.FullText = strings.Split(tweet.FullText, "http")[0]
+			}
 			kagomeParse(tweet.FullText)
 		}
 	}
@@ -140,9 +158,12 @@ func main() {
 	// fmt.Println(res)
 	// api.PostTweet(res, nil)
 
+	// 575テスト
 	// postStr := go7goFunc()
 	// fmt.Println(postStr)
 
+	// 575リスナ
+	twitterStream := api.PublicStreamFilter(vre)
 	for {
 		x := <-twitterStream.C
 		switch tw := x.(type) {
@@ -152,6 +173,9 @@ func main() {
 				if strings.HasPrefix(tweet.Text, "RT") || strings.HasPrefix(tweet.Text, "@") {
 					searchRes = append(searchRes[:i], searchRes[i+1:]...)
 				} else {
+					if strings.Contains(tweet.FullText, "http://") || strings.Contains(tweet.FullText, "https://") {
+						tweet.FullText = strings.Split(tweet.FullText, "http")[0]
+					}
 					kagomeParse(tweet.FullText)
 				}
 			}
